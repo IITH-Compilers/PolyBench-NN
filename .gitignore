@@ -1,0 +1,6 @@
+#compiled files
+*.o
+*.out
+
+#temp files
+*~
