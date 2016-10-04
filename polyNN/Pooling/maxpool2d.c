@@ -32,12 +32,6 @@
 
 
 /* Array initialization. */
-  POLYBENCH_2D_ARRAY_DECL(out_F,DATA_TYPE,NT,NQ,nt,nq);
-  POLYBENCH_2D_ARRAY_DECL(s_F,DATA_TYPE,NT,NS,nt,ns);
-  POLYBENCH_2D_ARRAY_DECL(inp_F,DATA_TYPE,NT,NP,nt,np);
-  POLYBENCH_2D_ARRAY_DECL(U,DATA_TYPE,NS,NP,ns,np);
-  POLYBENCH_2D_ARRAY_DECL(W,DATA_TYPE,NS,NS,ns,ns);
-  POLYBENCH_2D_ARRAY_DECL(V,DATA_TYPE,NS,NQ,ns,nq);
 static
 void init_array(int nn, int nd, int ih, int iw, int ow, int oh,
             DATA_TYPE POLYBENCH_4D(out_F,NN,ND,IH,IW,nn,nd,ih,iw),
@@ -115,10 +109,10 @@ void maxpool2d(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, int dw, i
 int main(int argc, char** argv)
 {
   /* Retrieve problem size. 
-     inp - 4d Input matrix nn x nd x nh x nw
+     inp - 4d Input matrix nn x nd x ih x iw
      (dh,dw) - pool size
      (sh,sw) - stride values
-     out - 4d output matrix
+     out - 4d output matrix nn x nd x oh x ow
    */
   int nn = NN;
   int nd = ND;
@@ -145,13 +139,9 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
-  maxpool2d(nt, np, ns, nq,
+  maxpool2d(nn, nd, ih, iw, oh ,ow, dh, dw, sh, sw,
           POLYBENCH_ARRAY(out_F),
-          POLYBENCH_ARRAY(s_F),
-          POLYBENCH_ARRAY(inp_F),
-          POLYBENCH_ARRAY(U),
-          POLYBENCH_ARRAY(W),
-          POLYBENCH_ARRAY(V));
+          POLYBENCH_ARRAY(inp_F));
 
   /* Stop and print timer. */
   polybench_stop_instruments;
