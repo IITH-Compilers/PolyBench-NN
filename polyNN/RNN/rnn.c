@@ -109,18 +109,18 @@ void rnn_forward(int nt, int np, int ns, int nq,
   #pragma scop
 
   for (t = 0; t < _PB_NT; t++)
-      
+  {    
       for(s1 = 0; s1 < _PB_NS; s1++)
           for(p = 0; p < _PB_NP; p++)
               s_F[t][s1] += U[s1][p] * inp_F[t][p];
 
           for(s2 = 0; s2 < _PB_NS; s2++)
-              s_F[t][s1] += W[s1][s2] * s_f[(t-1+NT) % NT][s2];
+              s_F[t][s1] += W[s1][s2] * s_F[(t-1+NT) % NT][s2];
       
       for(q = 0; q < _PB_NQ; q++){
           for(s1 = 0; s1 < _PB_NS; s1++){
               out_F[t][q] += V[q][s1] * s_F[t][s1];
-
+  }
   #pragma endscop
 }
 
@@ -184,7 +184,7 @@ int main(int argc, char** argv)
 
   /* Be clean. */
   POLYBENCH_FREE_ARRAY(out_F);
-  POLYBENCH_FREE_ARRAY(s_f);
+  POLYBENCH_FREE_ARRAY(s_F);
   POLYBENCH_FREE_ARRAY(inp_F);
   POLYBENCH_FREE_ARRAY(U);
   POLYBENCH_FREE_ARRAY(W);
