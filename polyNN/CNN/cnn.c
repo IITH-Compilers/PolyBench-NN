@@ -107,8 +107,18 @@ void cnn_forward(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int nh
 
 int main(int argc, char** argv)
 {
-  /* Retrieve problem size. */
-  int nn = NN;
+  /* Retrieve problem size. 
+   nn -> Batch size
+   nk -> Number of output feature maps
+   np -> Output matrix height
+   nq -> Output matrix width
+   nc -> Number of input feature maps
+   nr -> Filter height
+   ns -> Filter width
+   nh -> Input matrix height
+   nw -> Input matrix width
+   */
+  int nn = NN;	
   int nk = NK;
   int np = NP;
   int nq = NQ;
