@@ -76,7 +76,7 @@ void print_array(int nn, int nk, int np, int nq, DATA_TYPE POLYBENCH_4D(out_F,NN
 
    including the call and return. */
 static
-void maxpool2d(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, int dw, int sh, int sw,            
+void maxpool2d_forward(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, int dw, int sh, int sw,            
             DATA_TYPE POLYBENCH_4D(out_F,NN,ND,IH,IW,nn,nd,iw,ih),
             DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,OH,OW,nn,nd,ow,oh))
 {
@@ -139,7 +139,7 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
-  maxpool2d(nn, nd, ih, iw, oh ,ow, dh, dw, sh, sw,
+  maxpool2d_forward(nn, nd, ih, iw, oh ,ow, dh, dw, sh, sw,
           POLYBENCH_ARRAY(out_F),
           POLYBENCH_ARRAY(inp_F));
 
