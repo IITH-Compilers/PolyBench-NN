@@ -77,8 +77,8 @@ void print_array(int nn, int nk, int np, int nq, DATA_TYPE POLYBENCH_4D(out_F,NN
    including the call and return. */
 static
 void maxpool2d_forward(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, int dw, int sh, int sw,            
-            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,IH,IW,nn,nd,iw,ih),
-            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,OH,OW,nn,nd,ow,oh))
+            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,IH,IW,nn,nd,iw,ih),
+            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,OH,OW,nn,nd,ow,oh))
 {
 
   int n, d, r, c, row_st, row_nd, col_st, col_nd, val;
@@ -105,6 +105,36 @@ void maxpool2d_forward(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, i
   #pragma endscop
 }
 
+static
+void maxpool2d_backward(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, int dw, int sh, int sw,            
+            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,IH,IW,nn,nd,iw,ih),
+            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,OH,OW,nn,nd,ow,oh),
+            DATA_TYPE POLYBENCH_4D(err_in,NN,ND,IH,IW,nn,nd,iw,ih),
+            DATA_TYPE POLYBENCH_4D(err_out,NN,ND,OH,OW,nn,nd,ow,oh))
+{
+
+  int n, d, r, c, row_st, row_nd, col_st, col_nd;
+  #pragma scop
+
+  for(n = 0; n < _PB_N; n++)
+      for(d = 0; d < _PB_D; d++)
+          for(r = 0; r < _PB_R; r++){
+              row_st = r * sh;
+              row_end = max(row_st + dh, ih);
+              for(c = 0; c < _PB_C; c++){
+                  col_st = c * sw;
+                  col_nd = max(col_st + dw, iw);
+
+                  for(h = row_st; h < row_nd; h++)
+                      for(w = col_st; w < col_nd; w++)
+						  if(out_F[n][d][r][c] == inp_F[n][d][h][w])
+							  err_in[n][d][h][w] += err_out[n][d][r][c];
+
+              }
+          }
+
+  #pragma endscop
+}
 
 int main(int argc, char** argv)
 {
@@ -128,20 +158,30 @@ int main(int argc, char** argv)
   /* Variable declaration/allocation. */
   POLYBENCH_4D_ARRAY_DECL(inp_F,DATA_TYPE,NN,ND,IH,IW,nn,nd,ih,iw);
   POLYBENCH_4D_ARRAY_DECL(out_F,DATA_TYPE,NN,ND,OH,OW,nn,nd,oh,ow);
+  POLYBENCH_4D_ARRAY_DECL(err_in,DATA_TYPE,NN,ND,IH,IW,nn,nd,ih,iw);
+  POLYBENCH_4D_ARRAY_DECL(err_out,DATA_TYPE,NN,ND,OH,OW,nn,nd,oh,ow);
 
  
   /* Initialize array(s). */
   init_array (nn,nd,ih,iw,oh,ow,
           POLYBENCH_ARRAY(out_F),
-          POLYBENCH_ARRAY(inp_F));
+          POLYBENCH_ARRAY(inp_F)
+          POLYBENCH_ARRAY(err_in),
+          POLYBENCH_ARRAY(err_out));
 
   /* Start timer. */
   polybench_start_instruments;
 
   /* Run kernel. */
   maxpool2d_forward(nn, nd, ih, iw, oh ,ow, dh, dw, sh, sw,
+          POLYBENCH_ARRAY(inp_F),
+          POLYBENCH_ARRAY(out_F));
+
+  maxpool2d_backward(nn, nd, ih, iw, oh ,ow, dh, dw, sh, sw,
+          POLYBENCH_ARRAY(inp_F),
           POLYBENCH_ARRAY(out_F),
-          POLYBENCH_ARRAY(inp_F));
+          POLYBENCH_ARRAY(err_in),
+          POLYBENCH_ARRAY(err_out));
 
   /* Stop and print timer. */
   polybench_stop_instruments;
