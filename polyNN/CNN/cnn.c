@@ -43,8 +43,10 @@ void init_array(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int nh,
   for (a = 0; a < nn; a++)
     for (b = 0; b < nk; b++) 
 	for (e = 0; e < np; e++) 
-	  for (d = 0; d < nq; d++) 
+	  for (d = 0; d < nq; d++){
 		out_F[a][b][e][d] = (DATA_TYPE) 0;
+  		err_out[a][b][e][d] = (DATA_TYPE) 0;
+	  }
 
    for (a = 0; a < nk; a++)
     for (b = 0; b < nc; b++) 
@@ -55,8 +57,10 @@ void init_array(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int nh,
    for (a = 0; a < nn; a++)
     for (b = 0; b < nc; b++) 
 	for (e = 0; e < nh; e++) 
-	  for (d = 0; d < nw; d++)
-		 W[a][b][e][d] = (DATA_TYPE) 0;	
+	  for (d = 0; d < nw; d++){
+		 inp_F[a][b][e][d] = (DATA_TYPE) 0;	
+		 err_in[a][b][e][d]= (DATA_TYPE) 0;
+	  }
 }
 
 
@@ -104,6 +108,29 @@ void cnn_forward(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int nh
   #pragma endscop
 }
 
+void cnn_backward(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int nh,int u,int v,  
+			DATA_TYPE POLYBENCH_4D(err_out,NN,NK,NP,NQ,nn,nk,np,nq),
+			DATA_TYPE POLYBENCH_4D(W,NK,NC,NR,NS,nk,nc,nr,ns),
+			DATA_TYPE POLYBENCH_4D(err_in,NN,NC,NH,NW,nn,nc,nh,nw))
+{
+
+  int n, k, h, w, p, q, c, r, s;
+  #pragma scop
+  for(n = 0; n < _PB_N; n++)
+	for (c = 0; c < _PB_C; c++)
+	   for (h = 0; h < _PB_H; h++)
+			for (w = 0; w < _PB_W; w++)
+				for (k = 0; k < _PB_K; k++)
+					for (r = 0; r < _PB_R; r++)
+						for (s = 0; s < _PB_S; s++){
+							p = ((h - NR + r + 1) % u == 0 ? (h - NR + r + 1)/u : -1);
+							q = ((w - NS + s + 1) % v == 0 ? (w - NS + s + 1)/v : -1);
+							if(p>0 && q>0)
+								err_in[n][c][h][w] += W[k][c][r][s] * err_out[n][k][p][q];
+						}
+  #pragma endscop
+}
+
 
 int main(int argc, char** argv)
 {
@@ -134,23 +161,31 @@ int main(int argc, char** argv)
   POLYBENCH_4D_ARRAY_DECL(out_F,DATA_TYPE,NN,NK,NP,NQ,nn,nk,np,nq);
   POLYBENCH_4D_ARRAY_DECL(W,DATA_TYPE,NK,NC,NR,NS,nk,nc,nr,ns);
   POLYBENCH_4D_ARRAY_DECL(inp_F,DATA_TYPE,NN,NC,NH,NW,nn,nc,nh,nw);
- 
+  POLYBENCH_4D_ARRAY_DECL(err_in,DATA_TYPE,NN,NC,NH,NW,nn,nc,nh,nw);
+  POLYBENCH_4D_ARRAY_DECL(err_out,DATA_TYPE,NN,NK,NP,NQ,nn,nk,np,nq);
 
   /* Initialize array(s). */
   init_array (nn,nk,np,nq,nc,nr,ns,nw,nh,
 	      POLYBENCH_ARRAY(out_F),
 	      POLYBENCH_ARRAY(W),
-	      POLYBENCH_ARRAY(inp_F));
+	      POLYBENCH_ARRAY(inp_F),
+		  POLYBENCH_ARRAY(err_in),
+		  POLYBENCH_ARRAY(err_out));
 
 
   /* Start timer. */
   polybench_start_instruments;
 
   /* Run kernel. */
-  cnn_forward(nn, nk, np, nq, nc, nr, ns, nw, nh,nu,nv,
+  cnn_forward(nn, nk, np, nq, nc, nr, ns, nw, nh, nu, nv,
 	      POLYBENCH_ARRAY(out_F),
 	      POLYBENCH_ARRAY(W),
 	      POLYBENCH_ARRAY(inp_F));
+
+  cnn_backward(nn, nk, np, nq, nc, nr, ns, nw, nh, nu, nv,
+	      POLYBENCH_ARRAY(err_out),
+	      POLYBENCH_ARRAY(W),
+	      POLYBENCH_ARRAY(err_in));
 
   /* Stop and print timer. */
   polybench_stop_instruments;
@@ -164,6 +199,8 @@ int main(int argc, char** argv)
   POLYBENCH_FREE_ARRAY(out_F);
   POLYBENCH_FREE_ARRAY(W);
   POLYBENCH_FREE_ARRAY(inp_F);
+  POLYBENCH_FREE_ARRAY(err_out);
+  POLYBENCH_FREE_ARRAY(err_in);
 
   return 0;
 }
