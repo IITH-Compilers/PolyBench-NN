@@ -161,43 +161,44 @@ void rnn_backward(int nt, int np, int ns, int nq, int ndel, int bptt_trunc,
   #pragma scop
 
   /*
-	 Consider del_T to be array of array of size 2 x ns
+     Consider del_T to be array of array of size 2 x ns
   */
 
   for (t = _PB_NT - 1; t > 0; t--)
   {  
-	  flag = 0;
-	  for(q = 0; q < _PB_NQ; q++)
-		  for(s = 0; s < _PB_NS; s++)
-			  del_V[q][s] = err_out[t][q] * s_F[t][s];
-	  
-	  // Loop swap may help
-	  for(s = 0; s < _PB_NS; s++)
-	  {
-		  del_T[flag][s] = (DATA_TYPE) 0;
-		  for(q = 0; q < _PB_NQ; q++)
-			  del_T[flag][s] += V[q][s] * err_out[t][q];
-	  }
+      flag = 0;
+      for(q = 0; q < _PB_NQ; q++)
+          for(s = 0; s < _PB_NS; s++)
+              del_V[q][s] = err_out[t][q] * s_F[t][s];
+      
+      // Loop swap may help
+      for(s = 0; s < _PB_NS; s++)
+      {
+          del_T[flag][s] = (DATA_TYPE) 0;
+          for(q = 0; q < _PB_NQ; q++)
+              del_T[flag][s] += V[q][s] * err_out[t][q];
+      }
 
-	  for(step = t + 1; step > max(0, t - bptt_trunc); step--)
-	  {
-		  for(r = 0; r < _PB_NS; r++)
-			  for(s = 0; s < _PB_NS; s++)
-				  del_W[r][s] = del_T[r] * s_F[step - 1][s];
+      for(step = t + 1; step > max(0, t - bptt_trunc); step--)
+      {
+          for(r = 0; r < _PB_NS; r++)
+              for(s = 0; s < _PB_NS; s++)
+                  del_W[r][s] = del_T[flag][r] * s_F[step - 1][s];
 
-		  for(s = 0; s < _PB_NS; s++)
-			  for(p = 0; p < _PB_NP; p++)
-				  del_U[s][p] += del_T[s] * inp_F[p];
+          for(s = 0; s < _PB_NS; s++)
+              for(p = 0; p < _PB_NP; p++)
+                  del_U[s][p] += del_T[s] * inp_F[p];
 
-		  for(r = 0; r < _PB_NS; r++)
-		  {
-			  del_T[1 - flag][r] = (DATA_TYPE) 0;
-			  for(s = 0; s < _PB_NS; s++)
-				  del_T[1 - flag][r] += del_T[flag][s] * W[s][r];   // TODO: Verify
+          for(r = 0; r < _PB_NS; r++)
+          {
+              del_T[1 - flag][r] = (DATA_TYPE) 0;
+              for(s = 0; s < _PB_NS; s++)
+                  del_T[1 - flag][r] += del_T[flag][s] * W[s][r];   // TODO: Verify
 
-			  flag = 1 - flag;
-		  }
-	  }
+          }
+
+          flag = 1 - flag;
+      }
   }
   #pragma endscop
 
