@@ -33,13 +33,19 @@
 
 /* Array initialization. */
 static
-void init_array_forward(int nt, int np, int ns, int nq,
+void init_array(int nt, int np, int ns, int nq,
             DATA_TYPE POLYBENCH_2D(out_F,NT,NQ,nt,nq),
             DATA_TYPE POLYBENCH_2D(s_F,NT,NS,nt,ns),
             DATA_TYPE POLYBENCH_2D(inp_F,NT,NP,nt,np),
             DATA_TYPE POLYBENCH_2D(U,NS,NP,ns,np),
             DATA_TYPE POLYBENCH_2D(W,NS,NS,ns,ns),
-            DATA_TYPE POLYBENCH_2D(V,NQ,NS,nq,ns))
+            DATA_TYPE POLYBENCH_2D(V,NQ,NS,nq,ns),
+            DATA_TYPE POLYBENCH_2D(err_out,NT,NQ,nt,nq),
+            DATA_TYPE POLYBENCH_2D(del_U,NS,NP,ns,np),
+            DATA_TYPE POLYBENCH_2D(del_W,NS,NS,ns,ns),
+            DATA_TYPE POLYBENCH_2D(del_V,NQ,NS,nq,ns),
+	    DATA_TYPE POLYBENCH_ARRAY(del_TA),
+	    DATA_TYPE POLYBENCH_ARRAY(del_TB))
 {
   int a, b;
 
@@ -66,17 +72,6 @@ void init_array_forward(int nt, int np, int ns, int nq,
   for (a = 0; a < nq; a++)
     for (b = 0; b < ns; b++) 
         V[a][b] = (DATA_TYPE) 0;
-}
-
-
-static
-void init_array_backward(int nt, int np, int ns, int nq,
-            DATA_TYPE POLYBENCH_2D(err_out,NT,NQ,nt,nq),
-            DATA_TYPE POLYBENCH_2D(del_U,NS,NP,ns,np),
-            DATA_TYPE POLYBENCH_2D(del_W,NS,NS,ns,ns),
-            DATA_TYPE POLYBENCH_2D(del_V,NQ,NS,nq,ns))
-{
-  int a, b;
 
   for (a = 0; a < nt; a++)
     for (b = 0; b < nq; b++) 
@@ -95,23 +90,62 @@ void init_array_backward(int nt, int np, int ns, int nq,
         del_V[a][b] = (DATA_TYPE) 0;
 }
 
+
 /* DCE code. Must scan the entire live-out data.
    Can be used also to check the correctness of the output. */
 static
-void print_array(int nn, int nk, int np, int nq, DATA_TYPE POLYBENCH_4D(out_F,NN,NK,NP,NQ,nn,nk,np,nq))
+void print_array_fwd(int nt, int nq, DATA_TYPE POLYBENCH_2D(out_F,NT,NQ,nt,nq))
 {
   int a, b, e, d;
 
-  for (a = 0; a < nn; a++)
-    for (b = 0; b < nk; b++) 
-    for (e = 0; e < np; e++) 
-      for (d = 0; d < nq; d++) 
+  for (a = 0; a < nt; a++)
+    for (b = 0; b < nq; b++) 
     {
-    fprintf (stderr, DATA_PRINTF_MODIFIER, out_F[a][b][e][d]);
-    if ((a*nn*nk*np + b * nn * nk + e *np + d) % 20 == 0) fprintf (stderr, "\n");
+    fprintf (stderr, DATA_PRINTF_MODIFIER, out_F[a][b]);
+    if ((a*nq+ b) % 20 == 0) fprintf (stderr, "\n");
     }
   fprintf (stderr, "\n");
 }
+
+
+static
+void print_array_bwd(int np, int nq, int ns, DATA_TYPE  POLYBENCH_2D(del_U,NS,NP,ns,np), 
+			DATA_TYPE POLYBENCH_2D(del_W, NS,NS,ns,ns), DATA_TYPE POLYBENCH_2D(del_V, NQ,NS,nq,ns), 
+			DATA_TYPE POLYBENCH_1D(del_TA, NS,ns))
+{
+  int a, b, e, d;
+  for (a = 0; a < ns; a++)
+    for (b = 0; b < np; b++) 
+    {
+    fprintf (stderr, DATA_PRINTF_MODIFIER, del_U[a][b]);
+    if ((a*np+ b) % 20 == 0) fprintf (stderr, "\n");
+    }
+  fprintf (stderr, "\n");
+
+  for (a = 0; a < ns; a++)
+    for (b = 0; b < ns; b++) 
+    {
+    fprintf (stderr, DATA_PRINTF_MODIFIER, del_W[a][b]);
+    if ((a*ns+ b) % 20 == 0) fprintf (stderr, "\n");
+    }
+  fprintf (stderr, "\n");
+
+  for (a = 0; a < nq; a++)
+    for (b = 0; b < ns; b++) 
+    {
+    fprintf (stderr, DATA_PRINTF_MODIFIER, del_V[a][b]);
+    if ((a*ns+ b) % 20 == 0) fprintf (stderr, "\n");
+    }
+  fprintf (stderr, "\n");
+
+  for (a = 0; a < ns; a++)
+    {
+    fprintf (stderr, DATA_PRINTF_MODIFIER, del_TA[a]);
+    if (a % 20 == 0) fprintf (stderr, "\n");
+    }
+  fprintf (stderr, "\n");
+}
+
 
 
 /* Main computational kernel. The whole function will be timed,
@@ -134,11 +168,12 @@ void rnn_forward(int nt, int np, int ns, int nq,
           for(p = 0; p < _PB_NP; p++)
               s_F[t][s1] += U[s1][p] * inp_F[t][p];
 
-          for(s2 = 0; s2 < _PB_NS; s2++)
-              s_F[t][s1] += W[s1][s2] * s_F[(t-1+NT) % NT][s2];
+	  	  if(t > 0)
+			  for(s2 = 0; s2 < _PB_NS; s2++)
+				  s_F[t][s1] += W[s1][s2] * s_F[t-1][s2];
       
-      for(q = 0; q < _PB_NQ; q++){
-          for(s1 = 0; s1 < _PB_NS; s1++){
+      for(q = 0; q < _PB_NQ; q++)
+          for(s1 = 0; s1 < _PB_NS; s1++)
               out_F[t][q] += V[q][s1] * s_F[t][s1];
   }
   #pragma endscop
@@ -146,27 +181,23 @@ void rnn_forward(int nt, int np, int ns, int nq,
 
 
 static
-void rnn_backward(int nt, int np, int ns, int nq, int ndel, int bptt_trunc,  
-            DATA_TYPE POLYBENCH_2D(inp_F,NT,NQ,nt,nq),
+void rnn_backward(int nt, int np, int ns, int nq, int bptt_trunc,  
+            DATA_TYPE POLYBENCH_2D(inp_F,NT,NP,nt,np),
             DATA_TYPE POLYBENCH_2D(s_F,NT,NS,nt,ns),
             DATA_TYPE POLYBENCH_2D(W,NS,NS,ns,ns),
             DATA_TYPE POLYBENCH_2D(V,NQ,NS,nq,ns),
             DATA_TYPE POLYBENCH_2D(err_out,NT,NQ,nt,nq),
-            DATA_TYPE POLYBENCH_2D(del_T,NDEL,NS,ndel,ns),
             DATA_TYPE POLYBENCH_2D(del_U,NS,NP,ns,np),
             DATA_TYPE POLYBENCH_2D(del_W,NS,NS,ns,ns),
-            DATA_TYPE POLYBENCH_2D(del_V,NQ,NS,nq,ns))
+            DATA_TYPE POLYBENCH_2D(del_V,NQ,NS,nq,ns),
+            DATA_TYPE POLYBENCH_1D(del_TA,NS,ns),
+            DATA_TYPE POLYBENCH_1D(del_TB,NS,ns))
 {
-  int t, p, q, s, flag;
+  int t, p, q, r, s, step;
   #pragma scop
-
-  /*
-     Consider del_T to be array of array of size 2 x ns
-  */
 
   for (t = _PB_NT - 1; t > 0; t--)
   {  
-      flag = 0;
       for(q = 0; q < _PB_NQ; q++)
           for(s = 0; s < _PB_NS; s++)
               del_V[q][s] = err_out[t][q] * s_F[t][s];
@@ -174,32 +205,33 @@ void rnn_backward(int nt, int np, int ns, int nq, int ndel, int bptt_trunc,
       // Loop swap may help
       for(s = 0; s < _PB_NS; s++)
       {
-          del_T[flag][s] = (DATA_TYPE) 0;
+          del_TA[s] = (DATA_TYPE) 0;
           for(q = 0; q < _PB_NQ; q++)
-              del_T[flag][s] += V[q][s] * err_out[t][q];
+              del_TA[s] += V[q][s] * err_out[t][q];
       }
 
-      for(step = t + 1; step > max(0, t - bptt_trunc); step--)
+      for(step = t + 1; step > MAX(0, t - bptt_trunc); step--)
       {
-          for(r = 0; r < _PB_NS; r++)
-              for(s = 0; s < _PB_NS; s++)
-                  del_W[r][s] = del_T[flag][r] * s_F[step - 1][s];	// step - 1 need to check
+		  if(step > 0)
+			  for(r = 0; r < _PB_NS; r++)
+				  for(s = 0; s < _PB_NS; s++)
+					  del_W[r][s] = del_TA[r] * s_F[step - 1][s];	// step - 1 need to check
 
           for(s = 0; s < _PB_NS; s++)
               for(p = 0; p < _PB_NP; p++)
-                  del_U[s][p] += del_T[flag][s] * inp_F[step][p];
+                  del_U[s][p] += del_TA[s] * inp_F[step][p];
 
           for(r = 0; r < _PB_NS; r++)
           {
-              del_T[1 - flag][r] = (DATA_TYPE) 0;
+              del_TB[r] = (DATA_TYPE) 0;
               for(s = 0; s < _PB_NS; s++)
-                  del_T[1 - flag][r] += del_T[flag][s] * W[s][r];   // TODO: Verify
-
+                  del_TB[r] += del_TA[s] * W[s][r];   // TODO: Verify
           }
 
-          flag = 1 - flag;
-      }
-  }
+		  for(r = 0; r < _PB_NS; r++)
+			  del_TA[r] = del_TB[r];
+  	}
+  }	
   #pragma endscop
 
 }
@@ -220,7 +252,6 @@ int main(int argc, char** argv)
   int np = NP;
   int nq = NQ;
   int ns = NS;
-  int ndel = NDEL;  // 2
   int bptt_trunc = BT;
     
   /* Variable declaration/allocation. */
@@ -230,30 +261,28 @@ int main(int argc, char** argv)
   POLYBENCH_2D_ARRAY_DECL(U,DATA_TYPE,NS,NP,ns,np);
   POLYBENCH_2D_ARRAY_DECL(W,DATA_TYPE,NS,NS,ns,ns);
   POLYBENCH_2D_ARRAY_DECL(V,DATA_TYPE,NQ,NS,nq,ns);
-
-  /* Required for backprop */
   POLYBENCH_2D_ARRAY_DECL(err_out,DATA_TYPE,NT,NQ,nt,nq);
-  POLYBENCH_2D_ARRAY_DECL(del_T,DATA_TYPE,NDEL,NS,ndel,ns);
   POLYBENCH_2D_ARRAY_DECL(del_U,DATA_TYPE,NS,NP,ns,np);
   POLYBENCH_2D_ARRAY_DECL(del_W,DATA_TYPE,NS,NS,ns,ns);
   POLYBENCH_2D_ARRAY_DECL(del_V,DATA_TYPE,NQ,NS,nq,ns);
+  POLYBENCH_1D_ARRAY_DECL(del_TA,DATA_TYPE,NS,ns);
+  POLYBENCH_1D_ARRAY_DECL(del_TB,DATA_TYPE,NS,ns);
 
 
   /* Initialize array(s). */
-  init_array_forward (nt,np,ns,nq,
+ init_array(nt,np,ns,nq,
           POLYBENCH_ARRAY(out_F),
           POLYBENCH_ARRAY(s_F),
           POLYBENCH_ARRAY(inp_F),
           POLYBENCH_ARRAY(U),
           POLYBENCH_ARRAY(W),
-          POLYBENCH_ARRAY(V));
-
-  init_array_backward (nt,np,ns,nq,
+          POLYBENCH_ARRAY(V),
           POLYBENCH_ARRAY(err_out),
-          POLYBENCH_ARRAY(del_T),
           POLYBENCH_ARRAY(del_U),
           POLYBENCH_ARRAY(del_W),
-          POLYBENCH_ARRAY(del_V));
+          POLYBENCH_ARRAY(del_V),
+	  POLYBENCH_ARRAY(del_TA),
+	  POLYBENCH_ARRAY(del_TB));
 
   /* Start timer. */
   polybench_start_instruments;
@@ -267,16 +296,17 @@ int main(int argc, char** argv)
           POLYBENCH_ARRAY(W),
           POLYBENCH_ARRAY(V));
 
-  rnn_backward(nt, np, ns, nq, ndel, bptt_trunc,  
+  rnn_backward(nt, np, ns, nq, bptt_trunc,  
             POLYBENCH_ARRAY(inp_F),
             POLYBENCH_ARRAY(s_F),
             POLYBENCH_ARRAY(W),
             POLYBENCH_ARRAY(V),
             POLYBENCH_ARRAY(err_out),
-            POLYBENCH_ARRAY(del_T),
             POLYBENCH_ARRAY(del_U),
             POLYBENCH_ARRAY(del_W),
-            POLYBENCH_ARRAY(del_V));
+            POLYBENCH_ARRAY(del_V),
+            POLYBENCH_ARRAY(del_TA),
+            POLYBENCH_ARRAY(del_TB));
 
   /* Stop and print timer. */
   polybench_stop_instruments;
@@ -284,7 +314,9 @@ int main(int argc, char** argv)
 
   /* Prevent dead-code elimination. All live-out data must be printed
      by the function call in argument. */
-  polybench_prevent_dce(print_array(nn, nk, np, nq,  POLYBENCH_ARRAY(out_F)));
+  polybench_prevent_dce(print_array_fwd(nt, nq,  POLYBENCH_ARRAY(out_F)));
+  polybench_prevent_dce(print_array_bwd(np, nq, ns,  POLYBENCH_ARRAY(del_U), 
+			POLYBENCH_ARRAY(del_W), POLYBENCH_ARRAY(del_V), POLYBENCH_ARRAY(del_TA)));
 
   /* Be clean. */
   POLYBENCH_FREE_ARRAY(out_F);
@@ -293,10 +325,11 @@ int main(int argc, char** argv)
   POLYBENCH_FREE_ARRAY(U);
   POLYBENCH_FREE_ARRAY(W);
   POLYBENCH_FREE_ARRAY(V);
-  POLYBENCH_FREE_ARRAY(del_T);    
   POLYBENCH_FREE_ARRAY(del_U);
   POLYBENCH_FREE_ARRAY(del_W);
   POLYBENCH_FREE_ARRAY(del_V);
+  POLYBENCH_FREE_ARRAY(del_TA);    
+  POLYBENCH_FREE_ARRAY(del_TB);    
 
   return 0;
 }

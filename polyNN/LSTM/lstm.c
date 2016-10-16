@@ -48,7 +48,21 @@ void init_array_forward(int nt, int np, int ns, int nq,
             DATA_TYPE POLYBENCH_1D(i,NS,ns),
             DATA_TYPE POLYBENCH_1D(f,NS,ns),
             DATA_TYPE POLYBENCH_1D(o,NS,ns),
-            DATA_TYPE POLYBENCH_1D(g,NS,ns))
+            DATA_TYPE POLYBENCH_1D(g,NS,ns),
+            DATA_TYPE POLYBENCH_2D(del_S,NT,NS,nt,ns),
+            DATA_TYPE POLYBENCH_2D(del_C,NT,NS,nt,ns),
+            DATA_TYPE POLYBENCH_2D(del_Ui,NS,NP,ns,np),
+            DATA_TYPE POLYBENCH_2D(del_Uf,NS,NP,ns,np),
+            DATA_TYPE POLYBENCH_2D(del_Uo,NS,NP,ns,np),
+            DATA_TYPE POLYBENCH_2D(del_Ug,NS,NP,ns,np),
+            DATA_TYPE POLYBENCH_2D(del_Wi,NS,NS,ns,ns),
+            DATA_TYPE POLYBENCH_2D(del_Wf,NS,NS,ns,ns),
+            DATA_TYPE POLYBENCH_2D(del_Wo,NS,NS,ns,ns),
+            DATA_TYPE POLYBENCH_2D(del_Wg,NS,NS,ns,ns),
+            DATA_TYPE POLYBENCH_1D(del_i,NS,ns),
+            DATA_TYPE POLYBENCH_1D(del_f,NS,ns),
+            DATA_TYPE POLYBENCH_1D(del_o,NS,ns),
+            DATA_TYPE POLYBENCH_1D(del_g,NS,ns))
 {
   int a, b;
 
@@ -107,27 +121,6 @@ void init_array_forward(int nt, int np, int ns, int nq,
   
   for (b = 0; b < ns; b++) 
       g[b] = (DATA_TYPE) 0;
-  
-}
-
-static
-void init_array_backward(int nt, int np, int ns, int nq,
-            DATA_TYPE POLYBENCH_2D(del_S,NT,NS,nt,ns),
-            DATA_TYPE POLYBENCH_2D(del_C,NT,NS,nt,ns),
-            DATA_TYPE POLYBENCH_2D(del_Ui,NS,NP,ns,np),
-            DATA_TYPE POLYBENCH_2D(del_Uf,NS,NP,ns,np),
-            DATA_TYPE POLYBENCH_2D(del_Uo,NS,NP,ns,np),
-            DATA_TYPE POLYBENCH_2D(del_Ug,NS,NP,ns,np),
-            DATA_TYPE POLYBENCH_2D(del_Wi,NS,NS,ns,ns),
-            DATA_TYPE POLYBENCH_2D(del_Wf,NS,NS,ns,ns),
-            DATA_TYPE POLYBENCH_2D(del_Wo,NS,NS,ns,ns),
-            DATA_TYPE POLYBENCH_2D(del_Wg,NS,NS,ns,ns),
-            DATA_TYPE POLYBENCH_1D(del_i,NS,ns),
-            DATA_TYPE POLYBENCH_1D(del_f,NS,ns),
-            DATA_TYPE POLYBENCH_1D(del_o,NS,ns),
-            DATA_TYPE POLYBENCH_1D(del_g,NS,ns))
-{
-  int a, b;
 
   for (a = 0; a < nt; a++)
     for (b = 0; b < ns; b++) 
@@ -179,23 +172,21 @@ void init_array_backward(int nt, int np, int ns, int nq,
       o[b] = (DATA_TYPE) 0;
   
   for (b = 0; b < ns; b++) 
-      g[b] = (DATA_TYPE) 0;
+      g[b] = (DATA_TYPE) 0;  
 }
+
 
 /* DCE code. Must scan the entire live-out data.
    Can be used also to check the correctness of the output. */
 static
-void print_array(int nn, int nk, int np, int nq, DATA_TYPE POLYBENCH_4D(out_F,NN,NK,NP,NQ,nn,nk,np,nq))
+void print_array(int ns, DATA_TYPE POLYBENCH_1D(o,NS,ns))
 {
-  int a, b, e, d;
+  int a;
 
-  for (a = 0; a < nn; a++)
-    for (b = 0; b < nk; b++) 
-    for (e = 0; e < np; e++) 
-      for (d = 0; d < nq; d++) 
+  for (a = 0; a < ns; a++)
     {
-    fprintf (stderr, DATA_PRINTF_MODIFIER, out_F[a][b][e][d]);
-    if ((a*nn*nk*np + b * nn * nk + e *np + d) % 20 == 0) fprintf (stderr, "\n");
+    fprintf (stderr, DATA_PRINTF_MODIFIER, o[a]);
+    if ((a) % 20 == 0) fprintf (stderr, "\n");
     }
   fprintf (stderr, "\n");
 }
@@ -219,52 +210,52 @@ void lstm_forward(int nt, int np, int ns, int nq,
             DATA_TYPE POLYBENCH_1D(i,NS,ns),
             DATA_TYPE POLYBENCH_1D(f,NS,ns),
             DATA_TYPE POLYBENCH_1D(o,NS,ns),
-            DATA_TYPE POLYBENCH_1D(g,NS,ns))
-            
+            DATA_TYPE POLYBENCH_1D(g,NS,ns))      
 {
-  int t, p, q, s1, s2;
+  int t, p, q, s1, s2, b;
   #pragma scop
 
-  for (t = 0; t < _PB_NT; t++)
+  for (t = 0; t < _PB_T; t++)
   {    
-      for(s1 = 0; s1 < _PB_NS; s1++)
+      for(s1 = 0; s1 < _PB_S; s1++)
          {
           i[s1] = (DATA_TYPE) 0;
-          for(p = 0; p < _PB_NP; p++)
+          for(p = 0; p < _PB_P; p++)
               i[s1] += U_i[s1][p] * inp_F[t][p];
     
           
-          for(s2 = 0; s2 < _PB_NS; s2++)
+          for(s2 = 0; s2 < _PB_S; s2++)
+	  // FIXME Non affine
               i[s1] += W_i[s1][s2] * s_F[(t-1+NT) % NT][s2];
           }
 
-      for(s1 = 0; s1 < _PB_NS; s1++)
+      for(s1 = 0; s1 < _PB_S; s1++)
           {
           f[s1] = (DATA_TYPE) 0;
-          for(p = 0; p < _PB_NP; p++)
+          for(p = 0; p < _PB_P; p++)
               f[s1] += U_f[s1][p] * inp_F[t][p];
           
 
-          for(s2 = 0; s2 < _PB_NS; s2++)
+          for(s2 = 0; s2 < _PB_S; s2++)
               f[s1] += W_f[s1][s2] * s_F[(t-1+NT) % NT][s2];
 
           }
-      for(s1 = 0; s1 < _PB_NS; s1++)
+      for(s1 = 0; s1 < _PB_S; s1++)
           {
           o[s1] = (DATA_TYPE) 0;
-          for(p = 0; p < _PB_NP; p++)
+          for(p = 0; p < _PB_P; p++)
               o[s1] += U_o[s1][p] * inp_F[t][p];
           
-          for(s2 = 0; s2 < _PB_NS; s2++)
+          for(s2 = 0; s2 < _PB_S; s2++)
               o[s1] += W_o[s1][s2] * s_F[(t-1+NT) % NT][s2];
           }
-      for(s1 = 0; s1 < _PB_NS; s1++)
+      for(s1 = 0; s1 < _PB_S; s1++)
           {
           g[s1] = (DATA_TYPE) 0;
-          for(p = 0; p < _PB_NP; p++)
+          for(p = 0; p < _PB_P; p++)
               g[s1] += U_g[s1][p] * inp_F[t][p];
 
-          for(s2 = 0; s2 < _PB_NS; s2++)
+          for(s2 = 0; s2 < _PB_S; s2++)
               g[s1] += W_g[s1][s2] * s_F[(t-1+NT) % NT][s2];
           }
 
@@ -314,82 +305,83 @@ void lstm_backward(int nt, int np, int ns, int nq,
   #pragma scop
 
 
-  for (t = _PB_NT - 1; t > 0; t--)
+  for (t = _PB_T - 1; t > 0; t--)
   {  
-      for(s = 0; s < _PB_NS; s++){
+      for(s = 0; s < _PB_S; s++){
           del_o[s] = c_F[t][s] * del_S[t][s];
       }
 
-      for(s = 0; s < _PB_NS; s++){
+      for(s = 0; s < _PB_S; s++){
         del_C[t][s] += o[s] * del_S[t][s];
       }
 
-      for(s = 0; s < _PB_NS; s++){
+      for(s = 0; s < _PB_S; s++){
+ // FIXME Non affine
         del_f[s] = c_F[(t-1+NT) % NT][s] * del_C[t][s];
       }
       
-      for(s = 0; s < _PB_NS; s++){
+      for(s = 0; s < _PB_S; s++){
         del_C[(t-1+NT) % NT][s] = f[s] * del_C[t][s];
       }
 
-      for(s = 0; s < _PB_NS; s++){
+      for(s = 0; s < _PB_S; s++){
         del_i[s] = g[s] * del_C[t][s];
       }
 
-      for(s = 0; s < _PB_NS; s++){
+      for(s = 0; s < _PB_S; s++){
         del_g[s] = i[s] * del_C[t][s];
       }
 
-      for(s = 0; s < _PB_NS; s++){
-          for(p = 0; p < _PB_NP; p++){
+      for(s = 0; s < _PB_S; s++){
+          for(p = 0; p < _PB_P; p++){
               del_Ui[s][p] = inp_F[t][p] * i[s];
           }
       }
 
-      for(s = 0; s < _PB_NS; s++){
-          for(p = 0; p < _PB_NP; p++){
+      for(s = 0; s < _PB_S; s++){
+          for(p = 0; p < _PB_P; p++){
               del_Uf[s][p] = inp_F[t][p] * f[s];
           }
       }
 
-      for(s = 0; s < _PB_NS; s++){
-          for(p = 0; p < _PB_NP; p++){
+      for(s = 0; s < _PB_S; s++){
+          for(p = 0; p < _PB_P; p++){
               del_Uo[s][p] = inp_F[t][p] * o[s];
           }
       }
 
-      for(s = 0; s < _PB_NS; s++){
-          for(p = 0; p < _PB_NP; p++){
+      for(s = 0; s < _PB_S; s++){
+          for(p = 0; p < _PB_P; p++){
               del_Ug[s][p] = inp_F[t][p] * g[s];
           }
       }
 
-      for(s = 0; s < _PB_NS; s++){
-        for(r = 0; r < _PB_NS; r++){
+      for(s = 0; s < _PB_S; s++){
+        for(r = 0; r < _PB_S; r++){
               del_Wi[s][r] = s_F[(t-1+NT) % NT][r] * i[s];
           }
       }
 
-      for(s = 0; s < _PB_NS; s++){
-        for(r = 0; r < _PB_NS; r++){
+      for(s = 0; s < _PB_S; s++){
+        for(r = 0; r < _PB_S; r++){
               del_Wf[s][r] = s_F[(t-1+NT) % NT][r] * f[s];
           }
       }
 
-      for(s = 0; s < _PB_NS; s++){
-        for(r = 0; r < _PB_NS; r++){
+      for(s = 0; s < _PB_S; s++){
+        for(r = 0; r < _PB_S; r++){
               del_Wo[s][r] = s_F[(t-1+NT) % NT][r] * o[s];
           }
       }
 
-      for(s = 0; s < _PB_NS; s++){
-        for(r = 0; r < _PB_NS; r++){
+      for(s = 0; s < _PB_S; s++){
+        for(r = 0; r < _PB_S; r++){
               del_Wg[s][r] = s_F[(t-1+NT) % NT][r] * g[s];
           }
       }
 
-      for(s = 0; s < _PB_NS; s++){
-        for(r = 0; r < _PB_NS; r++){
+      for(s = 0; s < _PB_S; s++){
+        for(r = 0; r < _PB_S; r++){
               del_S[(t-1+NT) % NT][r] = W_i[r][s] * del_i[s] + W_f[r][s] * del_f[s] + W_o[r][s] * del_o[s] + W_g[r][s] * del_g[s];
           }
       }
@@ -432,8 +424,6 @@ int main(int argc, char** argv)
   POLYBENCH_1D_ARRAY_DECL(f,DATA_TYPE,NS,ns);
   POLYBENCH_1D_ARRAY_DECL(o,DATA_TYPE,NS,ns);
   POLYBENCH_1D_ARRAY_DECL(g,DATA_TYPE,NS,ns);
-
-  /* Required for backprop */
   POLYBENCH_2D_ARRAY_DECL(del_S,DATA_TYPE,NT,NS,nt,ns);
   POLYBENCH_2D_ARRAY_DECL(del_C,DATA_TYPE,NT,NS,nt,ns);
   POLYBENCH_2D_ARRAY_DECL(del_Ui,DATA_TYPE,NS,NP,ns,np);
@@ -465,10 +455,7 @@ int main(int argc, char** argv)
           POLYBENCH_ARRAY(i),
           POLYBENCH_ARRAY(f),
           POLYBENCH_ARRAY(o),
-          POLYBENCH_ARRAY(g));
-
-  /* Required for backward pass */
-   init_array_forward (nt,np,ns,nq,
+          POLYBENCH_ARRAY(g),
           POLYBENCH_ARRAY(del_S),
           POLYBENCH_ARRAY(del_C),
           POLYBENCH_ARRAY(del_Ui),
@@ -503,7 +490,24 @@ int main(int argc, char** argv)
           POLYBENCH_ARRAY(i),
           POLYBENCH_ARRAY(f),
           POLYBENCH_ARRAY(o),
-          POLYBENCH_ARRAY(g),
+          POLYBENCH_ARRAY(g));
+
+ lstm_backward(nt, np, ns, nq,
+          POLYBENCH_ARRAY(s_F),
+          POLYBENCH_ARRAY(inp_F),
+          POLYBENCH_ARRAY(c_F),
+          POLYBENCH_ARRAY(U_i),
+          POLYBENCH_ARRAY(U_f),
+          POLYBENCH_ARRAY(U_o),
+          POLYBENCH_ARRAY(U_g),
+          POLYBENCH_ARRAY(W_i),
+          POLYBENCH_ARRAY(W_f),
+          POLYBENCH_ARRAY(W_o),
+          POLYBENCH_ARRAY(W_g),
+          POLYBENCH_ARRAY(i),
+          POLYBENCH_ARRAY(f),
+          POLYBENCH_ARRAY(o),
+          POLYBENCH_ARRAY(g) ,
           POLYBENCH_ARRAY(del_S),
           POLYBENCH_ARRAY(del_C),
           POLYBENCH_ARRAY(del_Ui),
@@ -525,7 +529,7 @@ int main(int argc, char** argv)
 
   /* Prevent dead-code elimination. All live-out data must be printed
      by the function call in argument. */
-  polybench_prevent_dce(print_array(nn, nk, np, nq,  POLYBENCH_ARRAY(s_F)));
+  polybench_prevent_dce(print_array(ns,  POLYBENCH_ARRAY(o)));
 
   /* Be clean. */
   POLYBENCH_FREE_ARRAY(s_F);

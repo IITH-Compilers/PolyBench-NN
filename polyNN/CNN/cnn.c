@@ -36,7 +36,9 @@ static
 void init_array(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int nh, 
 			DATA_TYPE POLYBENCH_4D(out_F,NN,NK,NP,NQ,nn,nk,np,nq),
 			DATA_TYPE POLYBENCH_4D(W,NK,NC,NR,NS,nk,nc,nr,ns),
-			DATA_TYPE POLYBENCH_4D(inp_F,NN,NC,NH,NW,nn,nc,nh,nw))
+			DATA_TYPE POLYBENCH_4D(inp_F,NN,NC,NH,NW,nn,nc,nh,nw),
+			DATA_TYPE POLYBENCH_4D(err_in,NN,NC,NH,NW,nn,nc,nh,nw),
+			DATA_TYPE POLYBENCH_4D(err_out,NN,NK,NP,NQ,nn,nk,np,nq))
 {
   int a, b, e, d;
 
@@ -77,13 +79,15 @@ void print_array(int nn, int nk, int np, int nq, DATA_TYPE POLYBENCH_4D(out_F,NN
 	  for (d = 0; d < nq; d++) 
     {
 	fprintf (stderr, DATA_PRINTF_MODIFIER, out_F[a][b][e][d]);
-	if ((a*nn*nk*np + b * nn * nk + e *np + d) % 20 == 0) fprintf (stderr, "\n");
+	if ((a*nk*np*nq + b * np * nq + e *nq + d) % 20 == 0) fprintf (stderr, "\n");
     }
   fprintf (stderr, "\n");
 }
 
 inline int get_index(int p, int u, int R, int r)
 {
+	// FIXME : Non affine. 
+	// FIXME : Out of bounds access.
 	return p*u+R-r-1;
 }
 
@@ -97,13 +101,13 @@ void cnn_forward(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int nh
 {
   int n, k, p, q, c, r, s;
   #pragma scop
-  for (n = 0; n < _PB_N; n++)
-    for (k = 0; k < _PB_K; k++)
-       for (p = 0; p < _PB_P; p++)
-     	    for (q = 0; q < _PB_Q; q++)
-		for (c = 0; c < _PB_C; c++)
-			for (r = 0; r < _PB_R; r++)
-				for (s = 0; s < _PB_S; s++)	
+  for (n = 0; n < _PB_NN; n++)
+    for (k = 0; k < _PB_NK; k++)
+       for (p = 0; p < _PB_NP; p++)
+     	    for (q = 0; q < _PB_NQ; q++)
+		for (c = 0; c < _PB_NC; c++)
+			for (r = 0; r < _PB_NR; r++)
+				for (s = 0; s < _PB_NS; s++)	
 					 out_F[n][k][p][q] += W[k][c][r][s] * inp_F[n][c][get_index(p,u,NR,r)][get_index(q,v,NS,s)];
   #pragma endscop
 }
@@ -116,13 +120,14 @@ void cnn_backward(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int n
 
   int n, k, h, w, p, q, c, r, s;
   #pragma scop
-  for(n = 0; n < _PB_N; n++)
-	for (c = 0; c < _PB_C; c++)
-	   for (h = 0; h < _PB_H; h++)
-			for (w = 0; w < _PB_W; w++)
-				for (k = 0; k < _PB_K; k++)
-					for (r = 0; r < _PB_R; r++)
-						for (s = 0; s < _PB_S; s++){
+  for(n = 0; n < _PB_NN; n++)
+	for (c = 0; c < _PB_NC; c++)
+	   for (h = 0; h < _PB_NH; h++)
+			for (w = 0; w < _PB_NW; w++)
+				for (k = 0; k < _PB_NK; k++)
+					for (r = 0; r < _PB_NR; r++)
+						for (s = 0; s < _PB_NS; s++){
+							// FIXME Non Affine
 							p = ((h - NR + r + 1) % u == 0 ? (h - NR + r + 1)/u : -1);
 							q = ((w - NS + s + 1) % v == 0 ? (w - NS + s + 1)/v : -1);
 							if(p>0 && q>0)
@@ -169,8 +174,8 @@ int main(int argc, char** argv)
 	      POLYBENCH_ARRAY(out_F),
 	      POLYBENCH_ARRAY(W),
 	      POLYBENCH_ARRAY(inp_F),
-		  POLYBENCH_ARRAY(err_in),
-		  POLYBENCH_ARRAY(err_out));
+	      POLYBENCH_ARRAY(err_in),
+	      POLYBENCH_ARRAY(err_out));
 
 
   /* Start timer. */

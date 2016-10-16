@@ -30,12 +30,15 @@
 /* Default data type is double, default size is N=1024. */
 #include "maxpool2d.h"
 
+#include <limits.h>
 
 /* Array initialization. */
 static
-void init_array(int nn, int nd, int ih, int iw, int ow, int oh,
-            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,IH,IW,nn,nd,ih,iw),
-            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,OH,OW,nn,nd,oh,ow))
+void init_array(int nn, int nd, int ih, int iw, int oh, int ow,
+            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,OH,OW,nn,nd,oh,ow),
+            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,IH,IW,nn,nd,ih,iw),
+	    DATA_TYPE POLYBENCH_4D(err_in,NN,ND,IH,IW,nn,nd,ih,iw),
+            DATA_TYPE POLYBENCH_4D(err_out,NN,ND,OH,OW,nn,nd,oh,ow))
 {
   int a, b, d, e;
 
@@ -56,20 +59,37 @@ void init_array(int nn, int nd, int ih, int iw, int ow, int oh,
 /* DCE code. Must scan the entire live-out data.
    Can be used also to check the correctness of the output. */
 static
-void print_array(int nn, int nk, int np, int nq, DATA_TYPE POLYBENCH_4D(out_F,NN,NK,NP,NQ,nn,nk,np,nq))
+void print_array_fwd(int nn, int nd, int oh, int ow, DATA_TYPE POLYBENCH_4D(out_F,NN,ND,OH,OW,nn,nd,oh,ow))
 {
   int a, b, e, d;
 
   for (a = 0; a < nn; a++)
-    for (b = 0; b < nk; b++) 
-    for (e = 0; e < np; e++) 
-      for (d = 0; d < nq; d++) 
+    for (b = 0; b < nd; b++) 
+    for (e = 0; e < oh; e++) 
+      for (d = 0; d < ow; d++) 
     {
     fprintf (stderr, DATA_PRINTF_MODIFIER, out_F[a][b][e][d]);
-    if ((a*nn*nk*np + b * nn * nk + e *np + d) % 20 == 0) fprintf (stderr, "\n");
+    if ((a*nd*oh*ow + b*oh*ow + e*ow + d) % 20 == 0) fprintf (stderr, "\n");
     }
   fprintf (stderr, "\n");
 }
+
+static
+void print_array_bwd(int nn, int nd, int ih, int iw, DATA_TYPE POLYBENCH_4D(err_in,NN,ND,IH,IW,nn,nd,ih,iw))
+{
+  int a, b, e, d;
+
+  for (a = 0; a < nn; a++)
+    for (b = 0; b < nd; b++) 
+    for (e = 0; e < ih; e++) 
+      for (d = 0; d < iw; d++) 
+    {
+    fprintf (stderr, DATA_PRINTF_MODIFIER, err_in[a][b][e][d]);
+    if ((a*nd*ih*iw + b * ih * iw + e *iw + d) % 20 == 0) fprintf (stderr, "\n");
+    }
+  fprintf (stderr, "\n");
+}
+
 
 
 /* Main computational kernel. The whole function will be timed,
@@ -77,27 +97,28 @@ void print_array(int nn, int nk, int np, int nq, DATA_TYPE POLYBENCH_4D(out_F,NN
    including the call and return. */
 static
 void maxpool2d_forward(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, int dw, int sh, int sw,            
-            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,IH,IW,nn,nd,iw,ih),
-            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,OH,OW,nn,nd,ow,oh))
+            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,IH,IW,nn,nd,ih,iw),
+            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,OH,OW,nn,nd,oh,ow))
 {
 
-  int n, d, r, c, row_st, row_nd, col_st, col_nd, val;
+  int n, d, r, c, h, w, row_st, row_end, col_st, col_nd, val;
   #pragma scop
 
-  for(n = 0; n < _PB_N; n++)
-      for(d = 0; d < _PB_D; d++)
-          for(r = 0; r < _PB_R; r++){
+  for(n = 0; n < _PB_NN; n++)
+      for(d = 0; d < _PB_ND; d++)
+          for(r = 0; r < _PB_NR; r++){
+	      // FIXME Non affine	
               row_st = r * sh;
-              row_end = max(row_st + dh, ih);
-              for(c = 0; c < _PB_C; c++){
+              row_end = MAX(row_st + dh, ih);
+              for(c = 0; c < _PB_NC; c++){
+		   // FIXME Non affine
                   col_st = c * sw;
-                  col_nd = max(col_st + dw, iw);
+                  col_nd = MAX(col_st + dw, iw);
 
-                  val = -INF;
-                  for(h = row_st; h < row_nd; h++)
+                  val = INT_MIN;
+                  for(h = row_st; h < row_end; h++)
                       for(w = col_st; w < col_nd; w++)
-                          val = max(val, inp_F[n][d][h][w])
-
+                          val = MAX(val, inp_F[n][d][h][w]);
                   out_F[n][d][r][c] = val;
               }
           }
@@ -107,25 +128,25 @@ void maxpool2d_forward(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, i
 
 static
 void maxpool2d_backward(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, int dw, int sh, int sw,            
-            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,IH,IW,nn,nd,iw,ih),
-            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,OH,OW,nn,nd,ow,oh),
-            DATA_TYPE POLYBENCH_4D(err_in,NN,ND,IH,IW,nn,nd,iw,ih),
-            DATA_TYPE POLYBENCH_4D(err_out,NN,ND,OH,OW,nn,nd,ow,oh))
+            DATA_TYPE POLYBENCH_4D(inp_F,NN,ND,IH,IW,nn,nd,ih,iw),
+            DATA_TYPE POLYBENCH_4D(out_F,NN,ND,OH,OW,nn,nd,oh,ow),
+            DATA_TYPE POLYBENCH_4D(err_in,NN,ND,IH,IW,nn,nd,ih,iw),
+            DATA_TYPE POLYBENCH_4D(err_out,NN,ND,OH,OW,nn,nd,oh,ow))
 {
 
-  int n, d, r, c, row_st, row_nd, col_st, col_nd;
+  int n, d, r, c, h, w, row_st, row_end, col_st, col_nd;
   #pragma scop
 
-  for(n = 0; n < _PB_N; n++)
-      for(d = 0; d < _PB_D; d++)
-          for(r = 0; r < _PB_R; r++){
+  for(n = 0; n < _PB_NN; n++)
+      for(d = 0; d < _PB_ND; d++)
+          for(r = 0; r < _PB_NR; r++){
               row_st = r * sh;
-              row_end = max(row_st + dh, ih);
-              for(c = 0; c < _PB_C; c++){
+              row_end = MAX(row_st + dh, ih);
+              for(c = 0; c < _PB_NC; c++){
                   col_st = c * sw;
-                  col_nd = max(col_st + dw, iw);
+                  col_nd = MAX(col_st + dw, iw);
 
-                  for(h = row_st; h < row_nd; h++)
+                  for(h = row_st; h < row_end; h++)
                       for(w = col_st; w < col_nd; w++)
 						  if(out_F[n][d][r][c] == inp_F[n][d][h][w])
 							  err_in[n][d][h][w] += err_out[n][d][r][c];
@@ -165,7 +186,7 @@ int main(int argc, char** argv)
   /* Initialize array(s). */
   init_array (nn,nd,ih,iw,oh,ow,
           POLYBENCH_ARRAY(out_F),
-          POLYBENCH_ARRAY(inp_F)
+          POLYBENCH_ARRAY(inp_F),
           POLYBENCH_ARRAY(err_in),
           POLYBENCH_ARRAY(err_out));
 
@@ -189,7 +210,8 @@ int main(int argc, char** argv)
 
   /* Prevent dead-code elimination. All live-out data must be printed
      by the function call in argument. */
-  polybench_prevent_dce(print_array(nn, nk, np, nq,  POLYBENCH_ARRAY(out_F)));
+  polybench_prevent_dce(print_array_fwd(nn,nd,ow,oh,POLYBENCH_ARRAY(out_F)));
+  polybench_prevent_dce(print_array_bwd(nn,nd,iw,ih,POLYBENCH_ARRAY(err_in)));
 
   /* Be clean. */
   POLYBENCH_FREE_ARRAY(out_F);
