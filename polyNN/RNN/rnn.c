@@ -183,11 +183,11 @@ void rnn_backward(int nt, int np, int ns, int nq, int ndel, int bptt_trunc,
       {
           for(r = 0; r < _PB_NS; r++)
               for(s = 0; s < _PB_NS; s++)
-                  del_W[r][s] = del_T[flag][r] * s_F[step - 1][s];
+                  del_W[r][s] = del_T[flag][r] * s_F[step - 1][s];	// step - 1 need to check
 
           for(s = 0; s < _PB_NS; s++)
               for(p = 0; p < _PB_NP; p++)
-                  del_U[s][p] += del_T[s] * inp_F[p];
+                  del_U[s][p] += del_T[flag][s] * inp_F[step][p];
 
           for(r = 0; r < _PB_NS; r++)
           {
