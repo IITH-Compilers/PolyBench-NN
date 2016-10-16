@@ -272,7 +272,7 @@ int main(int argc, char** argv)
             POLYBENCH_ARRAY(s_F),
             POLYBENCH_ARRAY(W),
             POLYBENCH_ARRAY(V),
-            POLYBENCH_ARRAY(err_o),
+            POLYBENCH_ARRAY(err_out),
             POLYBENCH_ARRAY(del_T),
             POLYBENCH_ARRAY(del_U),
             POLYBENCH_ARRAY(del_W),
