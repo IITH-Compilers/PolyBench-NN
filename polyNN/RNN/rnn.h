@@ -15,41 +15,55 @@
 #  define LARGE_DATASET
 # endif
 
-# if !defined(NT) && !defined(NP) && !defined(NQ) && !defined(NS) && !defined(NDEL) && !defined(BT) 
+# if !defined(NT) && !defined(NP) && !defined(NQ) && !defined(NS)  && !defined(BT) 
 /* Define sample dataset sizes. */
 #  ifdef MINI_DATASET
-#   define NT 2
-#   define NP 3
-#   define NQ 4
-#   define NS 5
-#   define NDEL 6
-#   define BT 7
+#   define BT 1
+#   define NT 20
+#   define NP 20
+#   define NQ 25
+#   define NS 30
 #  endif 
 
 #  ifdef SMALL_DATASET
-
+#   define BT 2
+#   define NT 60
+#   define NP 80
+#   define NQ 100
+#   define NS 110
 #  endif 
 
 #  ifdef MEDIUM_DATASET
-
+#   define BT 3
+#   define NT 100
+#   define NP 200
+#   define NQ 250
+#   define NS 310
 #  endif 
 
 #  ifdef LARGE_DATASET
-
+#   define BT 4
+#   define NT 500
+#   define NP 500
+#   define NQ 650
+#   define NS 700
 #  endif 
 
 #  ifdef EXTRALARGE_DATASET
-
+#   define BT 5
+#   define NT 1000
+#   define NP 1000
+#   define NQ 1500
+#   define NS 2000
 #  endif 
 
 
-#endif /* !(NI NJ NK) */
+#endif /* !(NT NP NQ NS BT) */
 
 # define _PB_NT POLYBENCH_LOOP_BOUND(NT,nt)
 # define _PB_NP POLYBENCH_LOOP_BOUND(NP,np)
 # define _PB_NQ POLYBENCH_LOOP_BOUND(NQ,nq)
 # define _PB_NS POLYBENCH_LOOP_BOUND(NS,ns)
-# define _PB_NDEL POLYBENCH_LOOP_BOUND(NDEL,ndel)
 # define _PB_BT POLYBENCH_LOOP_BOUND(BT,bt)
 
 

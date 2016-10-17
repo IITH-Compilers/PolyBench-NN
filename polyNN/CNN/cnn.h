@@ -10,8 +10,6 @@
 #ifndef _CNN_H
 # define _CNN_H
 
-#define MINI_DATASET
-
 /* Default to LARGE_DATASET. */
 # if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
 #  define LARGE_DATASET
@@ -20,37 +18,70 @@
 # if !defined(NN) && !defined(NK) && !defined(NP) && !defined(NQ) && !defined(NC) && !defined(NR) && !defined(NS) && !defined(NW) && !defined(NH) 
 /* Define sample dataset sizes. */
 #  ifdef MINI_DATASET
-#   define NN 2
-#   define NK 3
-#   define NP 4
-#   define NQ 5
-#   define NC 6
-#   define NR 7
-#   define NS 8
-#   define NW 9
-#   define NH 10
 #   define NU 2
 #   define NV 2
+#   define NR 3
+#   define NS 3
+#   define NH 10
+#   define NW 10
+#   define NC 10
+#   define NK 7
+#   define NN 5
 #  endif 
 
 #  ifdef SMALL_DATASET
-
+#   define NU 3
+#   define NV 3
+#   define NR 4
+#   define NS 4
+#   define NH 20
+#   define NW 20
+#   define NC 20
+#   define NK 15
+#   define NN 10
 #  endif 
 
 #  ifdef MEDIUM_DATASET
-
+#   define NU 4
+#   define NV 4
+#   define NR 5
+#   define NS 5
+#   define NH 40
+#   define NW 40
+#   define NC 50
+#   define NK 25
+#   define NN 25
 #  endif 
 
 #  ifdef LARGE_DATASET
-
+#   define NU 5
+#   define NV 5
+#   define NR 6
+#   define NS 6
+#   define NH 50
+#   define NW 50
+#   define NC 75
+#   define NK 40
+#   define NN 50
 #  endif 
 
 #  ifdef EXTRALARGE_DATASET
-
+#   define NU 5
+#   define NV 5
+#   define NR 6
+#   define NS 6
+#   define NH 75
+#   define NW 75
+#   define NC 100
+#   define NK 40
+#   define NN 100
 #  endif 
 
 
-#endif /* !(NI NJ NK) */
+#endif /* !(NU NV NR NS NH NW NC NK NN) */
+
+#   define NP (NH - NR)/NU + 1 
+#   define NQ (NW - NS)/NV + 1 
 
 # define _PB_NN POLYBENCH_LOOP_BOUND(NN,nn)
 # define _PB_NK POLYBENCH_LOOP_BOUND(NK,nk)

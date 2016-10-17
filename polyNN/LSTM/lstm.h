@@ -18,30 +18,42 @@
 # if !defined(NT) && !defined(NP) && !defined(NQ) && !defined(NS)
 /* Define sample dataset sizes. */
 #  ifdef MINI_DATASET
-#   define NT 2
-#   define NP 3
-#   define NQ 4
-#   define NS 5
+#   define NT 1
+#   define NP 30
+#   define NQ 20
+#   define NS 25
 #  endif 
 
 #  ifdef SMALL_DATASET
-
+#   define NT 2
+#   define NP 100
+#   define NQ 50
+#   define NS 70
 #  endif 
 
 #  ifdef MEDIUM_DATASET
-
+#   define NT 3
+#   define NP 350
+#   define NQ 250
+#   define NS 300 
 #  endif 
 
 #  ifdef LARGE_DATASET
-
+#   define NT 4
+#   define NP 700
+#   define NQ 600
+#   define NS 650
 #  endif 
 
 #  ifdef EXTRALARGE_DATASET
-
+#   define NT 5
+#   define NP 3000
+#   define NQ 2500
+#   define NS 2850
 #  endif 
 
 
-#endif /* !(NI NJ NK) */
+#endif /* !(NT NP NQ NS) */
 # define _PB_T POLYBENCH_LOOP_BOUND(NT,nt)
 # define _PB_P POLYBENCH_LOOP_BOUND(NP,np)
 # define _PB_Q POLYBENCH_LOOP_BOUND(NQ,nq)
