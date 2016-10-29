@@ -1,3 +1,9 @@
+#include <math.h>
+#define ceild(n,d)  ceil(((double)(n))/((double)(d)))
+#define floord(n,d) floor(((double)(n))/((double)(d)))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on Apr. 14, 2015
  *
@@ -174,24 +180,85 @@ void rnn_forward(int nt, int np, int ns, int nq,
 		DATA_TYPE POLYBENCH_2D(V,NQ,NS,nq,ns))
 {
 	int t, p, q, s1, s2;
-#pragma scop
+/* Copyright (C) 1991-2015 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
 
-	for (t = 0; t < _PB_NT; t++)
-	{    
-		for(s1 = 0; s1 < _PB_NS; s1++)
-		{
-			for(p = 0; p < _PB_NP; p++)
-				s_F[t][s1] += U[s1][p] * inp_F[t][p];
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
 
-			if(t > 0)
-				for(s2 = 0; s2 < _PB_NS; s2++)
-					s_F[t][s1] += W[s1][s2] * s_F[t-1][s2];
-		}
-		for(q = 0; q < _PB_NQ; q++)
-			for(s1 = 0; s1 < _PB_NS; s1++)
-				out_F[t][q] += V[q][s1] * s_F[t][s1];
-	}
-#pragma endscop
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <http://www.gnu.org/licenses/>.  */
+/* This header is separate from features.h so that the compiler can
+   include it implicitly at the start of every compilation.  It must
+   not itself include <features.h> or any other header that includes
+   <features.h> because the implicit include comes before any feature
+   test macros that may be defined in a source file before it first
+   explicitly includes a system header.  GCC knows the name of this
+   header in order to preinclude it.  */
+/* glibc's intent is to support the IEC 559 math functionality, real
+   and complex.  If the GCC (4.9 and later) predefined macros
+   specifying compiler intent are available, use them to determine
+   whether the overall intent is to support these features; otherwise,
+   presume an older compiler has intent to support these features and
+   define these macros by default.  */
+/* wchar_t uses ISO/IEC 10646 (2nd ed., published 2011-03-15) /
+   Unicode 6.0.  */
+/* We do not support C11 <threads.h>.  */
+  int t1, t2, t3, t4, t5, t6, t7;
+ register int lbv, ubv;
+/* Start of CLooG code */
+if ((_PB_NS >= 1) && (_PB_NT >= 1)) {
+  if (_PB_NP >= 1) {
+    for (t2=0;t2<=floord(_PB_NT-1,32);t2++) {
+      for (t3=0;t3<=floord(_PB_NS-1,32);t3++) {
+        for (t4=0;t4<=floord(_PB_NP-1,32);t4++) {
+          for (t5=32*t2;t5<=min(_PB_NT-1,32*t2+31);t5++) {
+            for (t6=32*t3;t6<=min(_PB_NS-1,32*t3+31);t6++) {
+              for (t7=32*t4;t7<=min(_PB_NP-1,32*t4+31);t7++) {
+                s_F[t5][t6] += U[t6][t7] * inp_F[t5][t7];;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if (_PB_NT >= 2) {
+    for (t2=0;t2<=floord(_PB_NS-1,32);t2++) {
+      for (t3=0;t3<=floord(_PB_NT-1,32);t3++) {
+        for (t4=32*t2;t4<=min(_PB_NS-1,32*t2+31);t4++) {
+          for (t5=max(1,32*t3);t5<=min(_PB_NT-1,32*t3+31);t5++) {
+            s_F[t5][s1] += W[s1][t4] * s_F[t5-1][t4];;
+          }
+        }
+      }
+    }
+  }
+  if (_PB_NQ >= 1) {
+    for (t2=0;t2<=floord(_PB_NT-1,32);t2++) {
+      for (t3=0;t3<=floord(_PB_NQ-1,32);t3++) {
+        for (t4=0;t4<=floord(_PB_NS-1,32);t4++) {
+          for (t5=32*t2;t5<=min(_PB_NT-1,32*t2+31);t5++) {
+            for (t6=32*t3;t6<=min(_PB_NQ-1,32*t3+31);t6++) {
+              for (t7=32*t4;t7<=min(_PB_NS-1,32*t4+31);t7++) {
+                out_F[t5][t6] += V[t6][t7] * s_F[t5][t7];;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+/* End of CLooG code */
 }
 
 
@@ -209,43 +276,130 @@ void rnn_backward(int nt, int np, int ns, int nq, int bptt_trunc,
 		DATA_TYPE POLYBENCH_1D(delTB,NS,ns))
 {
 	int t, p, q, r, s, step;
-#pragma scop
+/* Copyright (C) 1991-2015 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
 
-	for (t = _PB_NT - 1; t > 0; t--)
-	{  
-		for(q = 0; q < _PB_NQ; q++)
-			for(s = 0; s < _PB_NS; s++)
-				delV[q][s] += err_out[t][q] * s_F[t][s];
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
 
-		for(s = 0; s < _PB_NS; s++)
-		{
-			delTA[s] = 0;
-			for(q = 0; q < _PB_NQ; q++)
-				delTA[s] += V[q][s] * err_out[t][q];
-		}
-		for(step=t+1; step > max(0, t - bptt_trunc); step--)
-		{
-			if(step > 0)
-				for(r = 0; r < _PB_NS; r++)
-					for(s = 0; s < _PB_NS; s++)
-						delW[r][s] += delTA[r] * s_F[step - 1][s];
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
 
-			for(s = 0; s < _PB_NS; s++)
-				for(p = 0; p < _PB_NP; p++)
-					delU[s][p] += delTA[s] * inp_F[step][p];
-
-			for(r = 0; r < _PB_NS; r++)
-			{
-				delTB[r] = 0;
-				for(s = 0; s < _PB_NS; s++)
-					delTB[r] += delTA[s] * W[s][r];  
-			}
-
-			for(r = 0; r < _PB_NS; r++)
-				delTA[r] = delTB[r];
-		}
-	}	
-#pragma endscop
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <http://www.gnu.org/licenses/>.  */
+/* This header is separate from features.h so that the compiler can
+   include it implicitly at the start of every compilation.  It must
+   not itself include <features.h> or any other header that includes
+   <features.h> because the implicit include comes before any feature
+   test macros that may be defined in a source file before it first
+   explicitly includes a system header.  GCC knows the name of this
+   header in order to preinclude it.  */
+/* glibc's intent is to support the IEC 559 math functionality, real
+   and complex.  If the GCC (4.9 and later) predefined macros
+   specifying compiler intent are available, use them to determine
+   whether the overall intent is to support these features; otherwise,
+   presume an older compiler has intent to support these features and
+   define these macros by default.  */
+/* wchar_t uses ISO/IEC 10646 (2nd ed., published 2011-03-15) /
+   Unicode 6.0.  */
+/* We do not support C11 <threads.h>.  */
+  int t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12;
+ register int lbv, ubv;
+/* Start of CLooG code */
+if ((_PB_NS >= 1) && (_PB_NT >= 2)) {
+  for (t2=-_PB_NT+1;t2<=-1;t2++) {
+    for (t4=0;t4<=floord(_PB_NQ-1,32);t4++) {
+      for (t6=0;t6<=floord(_PB_NS-1,32);t6++) {
+        for (t7=32*t4;t7<=min(_PB_NQ-1,32*t4+31);t7++) {
+          lbv=32*t6;
+          ubv=min(_PB_NS-1,32*t6+31);
+#pragma ivdep
+#pragma vector always
+          for (t9=lbv;t9<=ubv;t9++) {
+            delV[t7][t9] = err_out[-t2][t7] * s_F[-t2][t9];;
+          }
+        }
+      }
+    }
+    for (t4=0;t4<=floord(_PB_NS-1,32);t4++) {
+      lbv=32*t4;
+      ubv=min(_PB_NS-1,32*t4+31);
+#pragma ivdep
+#pragma vector always
+      for (t7=lbv;t7<=ubv;t7++) {
+        delTA[t7] = 0;;
+      }
+      for (t6=0;t6<=floord(_PB_NQ-1,32);t6++) {
+        for (t7=32*t4;t7<=min(_PB_NS-1,32*t4+31);t7++) {
+          for (t9=32*t6;t9<=min(_PB_NQ-1,32*t6+31);t9++) {
+            delTA[t7] += V[t9][t7] * err_out[-t2][t9];;
+          }
+        }
+      }
+    }
+    for (t4=t2-1;t4<=min(-1,t2+bptt_trunc-1);t4++) {
+      for (t6=0;t6<=floord(_PB_NS-1,32);t6++) {
+        for (t8=0;t8<=floord(_PB_NS-1,32);t8++) {
+          for (t9=32*t6;t9<=min(_PB_NS-1,32*t6+31);t9++) {
+            lbv=32*t8;
+            ubv=min(_PB_NS-1,32*t8+31);
+#pragma ivdep
+#pragma vector always
+            for (t11=lbv;t11<=ubv;t11++) {
+              delW[t9][t11] += delTA[t9] * s_F[-t4 - 1][t11];;
+            }
+          }
+        }
+      }
+      if (_PB_NP >= 1) {
+        for (t6=0;t6<=floord(_PB_NS-1,32);t6++) {
+          for (t8=0;t8<=floord(_PB_NP-1,32);t8++) {
+            for (t9=32*t6;t9<=min(_PB_NS-1,32*t6+31);t9++) {
+              lbv=32*t8;
+              ubv=min(_PB_NP-1,32*t8+31);
+#pragma ivdep
+#pragma vector always
+              for (t11=lbv;t11<=ubv;t11++) {
+                delU[t9][t11] += delTA[t9] * inp_F[-t4][t11];;
+              }
+            }
+          }
+        }
+      }
+      for (t6=0;t6<=floord(_PB_NS-1,32);t6++) {
+        lbv=32*t6;
+        ubv=min(_PB_NS-1,32*t6+31);
+#pragma ivdep
+#pragma vector always
+        for (t9=lbv;t9<=ubv;t9++) {
+          delTB[t9] = 0;;
+        }
+        for (t8=0;t8<=floord(_PB_NS-1,32);t8++) {
+          for (t9=32*t6;t9<=min(_PB_NS-1,32*t6+31);t9++) {
+            for (t11=32*t8;t11<=min(_PB_NS-1,32*t8+31);t11++) {
+              delTB[t9] += delTA[t11] * W[t11][t9];;
+            }
+          }
+        }
+      }
+      for (t6=0;t6<=floord(_PB_NS-1,32);t6++) {
+        lbv=32*t6;
+        ubv=min(_PB_NS-1,32*t6+31);
+#pragma ivdep
+#pragma vector always
+        for (t7=lbv;t7<=ubv;t7++) {
+          delTA[t7] = delTB[t7];;
+        }
+      }
+    }
+  }
+}
+/* End of CLooG code */
 
 }
 int main(int argc, char** argv)
