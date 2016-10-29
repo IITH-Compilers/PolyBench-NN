@@ -153,7 +153,7 @@ void lstm_forward(int nt, int np, int ns, int nq,
 	{    
 		for(s1 = 0; s1 < _PB_S; s1++)
 		{
-			i[s1] = (DATA_TYPE) SCALAR_VAL(0.0);;
+			i[s1] = 0.0;
 			for(p = 0; p < _PB_P; p++)
 				i[s1] += U_i[s1][p] * inp_F[t][p];
 
@@ -164,7 +164,7 @@ void lstm_forward(int nt, int np, int ns, int nq,
 
 		for(s1 = 0; s1 < _PB_S; s1++)
 		{
-			f[s1] = (DATA_TYPE) SCALAR_VAL(0.0);
+			f[s1] = 0.0;
 			for(p = 0; p < _PB_P; p++)
 				f[s1] += U_f[s1][p] * inp_F[t][p];
 
@@ -175,7 +175,7 @@ void lstm_forward(int nt, int np, int ns, int nq,
 		}
 		for(s1 = 0; s1 < _PB_S; s1++)
 		{
-			o[s1] = (DATA_TYPE) SCALAR_VAL(0.0);
+			o[s1] = 0.0;
 			for(p = 0; p < _PB_P; p++)
 				o[s1] += U_o[s1][p] * inp_F[t][p];
 
@@ -185,7 +185,7 @@ void lstm_forward(int nt, int np, int ns, int nq,
 		}
 		for(s1 = 0; s1 < _PB_S; s1++)
 		{
-			g[s1] = (DATA_TYPE) SCALAR_VAL(0.0);
+			g[s1] = 0.0;
 			for(p = 0; p < _PB_P; p++)
 				g[s1] += U_g[s1][p] * inp_F[t][p];
 
