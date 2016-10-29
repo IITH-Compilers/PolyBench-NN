@@ -112,11 +112,11 @@ void maxpool2d_forward(int nn, int nd ,int ih, int iw, int ow, int oh, int dh, i
 			for(r = 0; r < _PB_NR; r++){
 				// FIXME Non affine	
 				row_st = r * sh;
-				row_end = MAX(row_st + dh, ih);
+				row_end = MAX(row_st + dh, ih);		// FIXME
 				for(c = 0; c < _PB_NC; c++){
 					// FIXME Non affine
 					col_st = c * sw;
-					col_nd = MAX(col_st + dw, iw);
+					col_nd = MAX(col_st + dw, iw);	// FIXME
 
 					val = INT_MIN;
 					for(h = row_st; h < row_end; h++)
