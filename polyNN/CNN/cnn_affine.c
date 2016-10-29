@@ -100,7 +100,7 @@ void cnn_forward(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int nh
 					for (c = 0; c < _PB_NC; c++)
 						for (r = 0; r < _PB_NR; r++)
 							for (s = 0; s < _PB_NS; s++)	
-								out_F[n][k][p][q] += W[k][c][r][s] * inp_F[n][c][u*p+NR-r-1][u*q+NS-s-1];
+								out_F[n][k][p][q] += W[k][c][r][s] * inp_F[n][c][5*p+NR-r-1][5*q+NS-s-1];
 #pragma endscop
 }
 
@@ -121,8 +121,8 @@ void cnn_backward(int nn, int nk,int np,int nq,int nc,int nr,int ns,int nw,int n
 							for (s = 0; s < _PB_NS; s++)
 								for (p = 0; p < _PB_NP; p++)
 									for (q = 0; q < _PB_NQ; q++)
-										if((u*p - (h - NR + r + 1) ==0) && (u*q - (w - NS + s + 1) ==0))
-											err_in[n][c][h][w] += W[k][c][r][s] * err_out[n][k][p][q];
+								if((5*p - (h - NR + r + 1) ==0) && (5*q - (w - NS + s + 1) ==0))
+										err_in[n][c][h][w] += W[k][c][r][s] * err_out[n][k][p][q];
 								
 							
 #pragma endscop
