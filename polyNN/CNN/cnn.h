@@ -122,5 +122,5 @@
 #  define POW_FUN(x,y) pow(x,y)
 # endif
 
-#endif /* !_GEMM_H */
+#endif /* !_CNN_H */
 
