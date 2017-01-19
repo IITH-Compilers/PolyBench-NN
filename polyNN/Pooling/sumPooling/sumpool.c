@@ -26,7 +26,7 @@
 
 /* Include benchmark-specific header. */
 /* Default data type is double, default size is N=1024. */
-#include "avgpool.h"
+#include "sumpool.h"
 
 #include <limits.h>
 
