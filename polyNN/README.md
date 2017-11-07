@@ -1,0 +1,22 @@
+## Polybench/polyNN
+
+Deep Neural Networks (DNN) are well under-
+stood to be one of the largest consumers of HPC resources
+and efficiently running their training and inference phases
+on modern heterogeneous architectures (and accelerators)
+poses an important challenge for the compilation com-
+munity. Currently, DNNs are actively being studied by the
+automatic parallelization and polyhedral compilation com-
+munities for the same purpose. In this (initial) paper, we
+study the kernels of four varieties of DNN layers with the
+goal of applying automatic parallelization techniques for
+latest architectures. We show the affine (Polyhedral) nature
+of these kernels thereby showing that they are amenable
+to well known polyhedral compilation techniques. For
+benchmarking purposes, we implemented forward and
+backward kernels for four varieties of layers namely convo-
+lutional, pooling, recurrent and long short term memory in
+PolyBench/C, A well known polyhedral benchmarking
+suite. We also evaluated our kernels on the state-of-art
+Pluto polyhedral compiler in order to highlight the
+speedups obtained by automatic loop transformations.
