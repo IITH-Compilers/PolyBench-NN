@@ -8,4 +8,5 @@ backward kernels for four varieties of layers namely convolutional, pooling, rec
 PolyBench/C, a well known polyhedral benchmarking suite. We also evaluated our kernels on the state-of-art Pluto polyhedral compiler in order to highlight the speedups obtained by automatic loop transformations.
 
 - Accepted at the 24th IEEE International Conference on High Performance Computing, Data, 
+
 and Analytics **HiPC 2017** *(Poster)*. Link to the paper can be found [here](https://drive.google.com/open?id=1yEi5kYJ8E66EnTPiKz3OCS0kX7NFadPo)
