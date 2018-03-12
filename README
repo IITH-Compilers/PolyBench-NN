@@ -12,7 +12,6 @@ namely convolutional, pooling, recurrent and long short term memory in PolyBench
 benchmarking suite. We also evaluated our kernels on the state-of-art Pluto polyhedral compiler in order to 
 highlight the speedups obtained by automatic loop transformations.
 
-Accepted at the 24th IEEE International Conference on High Performance Computing, Data, and Analytics HiPC 2017 (Poster). 
-Link to the paper can be found 
 
-[here][https://drive.google.com/file/d/1yEi5kYJ8E66EnTPiKz3OCS0kX7NFadPo/view]
+* Accepted at the 24th IEEE International Conference on High Performance Computing, Data, and Analytics HiPC 2017 (Poster). 
+* Link to the paper can be found [here](https://drive.google.com/file/d/1yEi5kYJ8E66EnTPiKz3OCS0kX7NFadPo/view)
